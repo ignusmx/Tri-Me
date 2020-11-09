@@ -47,10 +47,13 @@ Triangle.prototype.centroid = function() {
 
 Triangle.prototype.draw = function(ctx) {
   ctx.beginPath()
+  ctx.strokeStyle ="white";
+  ctx.lineWidth = "0.3";
   ctx.moveTo(this.a.x, this.a.y)
   ctx.lineTo(this.b.x, this.b.y)
   ctx.lineTo(this.c.x, this.c.y)
   ctx.closePath()
+  ctx.stroke()
 }
 
 function byX(a, b) {

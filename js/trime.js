@@ -1,10 +1,10 @@
 "use strict";
 
 var options = {
-    type: "Fast",
+    type: "YAPE06",
     fastThreshold: 16,
-    laplacianThreshold: 30,
-    eigenThreshold: 30,
+    laplacianThreshold: 70,
+    eigenThreshold: 18,
     hueShift: 0,
     invertLightness: false,
     invertSaturation: false,
@@ -16,18 +16,114 @@ var options = {
 
 var gui, imageData;
 var img_u8, count, corners;
-var featureContext, triangleContext;
+var featureContext, triangleContext, textContext;
 
 var video = document.getElementById('webcam');
 var featureCanvas = document.getElementById('features');
 var triangleCanvas = document.getElementById('triangles');
-
+var handCanvas = document.getElementById('hand');
+var model = null;
+var isVideo = false;
+var currentPredictions = [];
+var radius = 0;
+var centerX = 0;
+var centerY = 0;
+var mainPrediction = null;
+var currentTriggerTime = 0;
+var triggerTime = 5;
+var triggering = false;
+var triggered = false;
+var leftHandPos = {x:0,y:0};
+var rightHandPost = {x:0,y:0};
+var scaledLeftHandPos = {x:0,y:0};
+var scaledRightHandPost = {x:0,y:0};
 //
 
-function init() {
+const modelParams = {
+    flipHorizontal: true,   // flip e.g for video  
+    maxNumBoxes: 10,        // maximum number of boxes to detect
+    iouThreshold: 0.5,      // ioU threshold for non-max suppression
+    scoreThreshold: 0.8,    // confidence threshold for predictions.
+}
 
-    video.play();
+function startVideo() {
+    handTrack.startVideo(video).then(function (status) {
+        console.log("video started", status);
+        if (status) {
+            console.log("Video started. Now tracking");
+            isVideo = true
+            runDetection()
+        } else {
+            console.log("Please enable video");
+        }
+    });
+}
 
+function testHandCollision(point, handBB)
+{
+    if(
+        (point.x >= handBB[0] && point.x <= handBB[0]+handBB[2])
+        && (point.y >= handBB[1] && point.y <= handBB[1]+handBB[3])
+        )
+    {
+        return true;
+    }
+    
+    return false;
+}
+
+function runDetection() {
+    model.detect(video).then(predictions => {
+        currentPredictions = predictions;
+        mainPrediction = null;
+        if(predictions.length > 0){
+            mainPrediction = currentPredictions[0];
+            var leftHandCollided = false;
+            var rightHandCollided = false;
+            for(var i = 0; i < currentPredictions.length; i++)
+            {
+                leftHandCollided = leftHandCollided ? leftHandCollided : testHandCollision(scaledLeftHandPos, currentPredictions[i].bbox);
+                rightHandCollided = rightHandCollided ? rightHandCollided : testHandCollision(scaledRightHandPost, currentPredictions[i].bbox);
+            }
+
+            if(leftHandCollided && rightHandCollided)
+            {
+                triggered = true;
+                centerX = scaledLeftHandPos.x + ((scaledRightHandPost.x - scaledLeftHandPos.x) / 2);
+                centerY = scaledLeftHandPos.y + ((scaledRightHandPost.y - scaledLeftHandPos.y) / 2);
+                $("#leftHand").fadeTo(2000, 0);
+                $("#rightHand").fadeTo(2000, 0);
+                $("#text").fadeTo(2000, 0);
+            }
+            /*if(!triggering)
+            {
+                triggering = true;
+                trigger();
+            }*/
+        }
+
+        if(triggered)
+        {
+            model.dispose();
+            
+            triggered = true;
+            currentPredictions = [];
+            video.pause();
+
+            setInterval(() => {
+                radius += 20;
+            }, 200);
+            
+        }
+        else
+        {
+            requestAnimationFrame(runDetection);
+        }
+    });
+}
+
+function startExperience()
+{
     featureContext = featureCanvas.getContext('2d');
     triangleContext = triangleCanvas.getContext('2d');
 
@@ -40,9 +136,61 @@ function init() {
     setupControls();
 
     requestAnimationFrame(animate);
-
+    
     $(window).bind('resize', resize);
     resize();
+}
+
+function getRandomNumber(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+function convertPointToScreenScale(point)
+{
+    return {x:point.x*640/$(window).width(), y:point.y*480/$(window).height()};
+}
+
+function init() {
+
+    video.play();
+    var typed = new Typed('.typed', {
+        strings: ["Keep your distance and \nUSE YOUR HANDS TO #IgniteTheFuture."],
+        typeSpeed: 50,
+        backSpeed: 50,
+        onComplete: function(){
+            // Load the model.
+            $("#loading").fadeTo(2000, 1);
+
+            handTrack.load(modelParams).then(lmodel => {
+                // detect objects in the image.
+                model = lmodel;
+                //startVideo();
+                $("#loading").fadeTo(2000, 0);
+                var a = getRandomNumber(0, 45);
+                var leftSide = [0, 400];
+                var rightSide = [900, 1000];
+
+                $("#leftHand").css('transform', 'rotate(' + a + 'deg) scaleX(-1)');
+                $("#rightHand").css('transform', 'rotate(-' + a + 'deg)');
+
+                leftHandPos = {x: getRandomNumber(leftSide[0],leftSide[1]), y: getRandomNumber(200,400)};
+                rightHandPost = {x: getRandomNumber(rightSide[0],rightSide[1]), y: getRandomNumber(200,400)};
+                scaledLeftHandPos = convertPointToScreenScale(leftHandPos);
+                scaledRightHandPost = convertPointToScreenScale(rightHandPost);
+                
+                $("#leftHand").css('left', leftHandPos.x);
+                $("#leftHand").css('top', leftHandPos.y);
+
+                $("#rightHand").css('left', rightHandPost.x);
+                $("#rightHand").css('top', rightHandPost.y);
+
+                $("#leftHand").fadeTo(2000, 1);
+                $("#rightHand").fadeTo(2000, 1);
+                runDetection();
+                startExperience();
+            });
+        }
+    });
 }
 
 //
@@ -84,11 +232,40 @@ function setupControls() {
 function animate() {
     requestAnimationFrame(animate);
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
-
+        featureContext.translate(640, 0);
+        featureContext.scale(-1, 1);
         featureContext.drawImage(video, 0, 0, 640, 480);
-        imageData = featureContext.getImageData(0, 0, 640, 480);
+        let imgData = featureContext.getImageData(0, 0, featureContext.canvas.width, featureContext.canvas.height);
+        let pixels = imgData.data;
+        /*for (var i = 0; i < pixels.length; i += 4) {
 
+            let lightness = parseInt((pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3);
+
+            pixels[i] = lightness;
+            pixels[i + 1] = lightness;
+            pixels[i + 2] = lightness;
+        }
+        featureContext.putImageData(imgData, 0, 0);*/
+        
+        /*for(var i = 0; i < currentPredictions.length; i++)
+        {
+            let handBBox = currentPredictions[i].bbox;
+            var gradient = featureContext.createLinearGradient(0,0, 640,0);
+            featureContext.globalCompositeOperation = 'source-over';
+            // Add three color stops
+            gradient.addColorStop(0,'rgba(28,18,161,0.2)');
+            gradient.addColorStop(0.4,'rgba(28,18,161,0.2)');
+            gradient.addColorStop(1, 'rgba(226,255,0,0.2)');
+
+            // Set the fill style and draw a rectangle
+            featureContext.fillStyle = gradient;
+            featureContext.fillRect(handBBox[0], handBBox[1], handBBox[2], handBBox[3]);
+        }*/
+        
+        imageData = featureContext.getImageData(0, 0, 640, 480);
         jsfeat.imgproc.grayscale(imageData.data, img_u8.data);
+
+        
 
         //
 
@@ -125,9 +302,10 @@ function drawTriangles() {
 
     var triangleCanvas = document.getElementById("triangles"),
         triangleContext = triangleCanvas.getContext("2d")
-    triangleContext.clearRect(0, 0, triangleCanvas.width, triangleCanvas.height);
-
-    triangleContext.drawImage(video, 0, 0, 640, 480);
+        triangleContext.clearRect(0, 0, triangleCanvas.width, triangleCanvas.height);
+        featureContext.translate(640, 0);
+        featureContext.scale(-1, 1);
+        triangleContext.drawImage(video, 0, 0, 640, 480);
 
     var vertices = new Array(count + 4);
 
@@ -142,10 +320,63 @@ function drawTriangles() {
 
     var triangles = triangulate(vertices)
 
-    var i = triangles.length
+    var i = triangles.length;
+    var colorize = false;
+    
     while (i) {
         --i;
         var pixel = (triangles[i].centroid().y * triangleCanvas.width + triangles[i].centroid().x) * 4;
+        
+        //greyscale
+        /*var grey = 0.2126 * imageData.data[pixel] + 0.7152 * imageData.data[pixel + 1] + 0.0722 * imageData.data[pixel + 2];
+        imageData.data[pixel] = 0;
+        imageData.data[pixel + 1] = 0;
+        imageData.data[pixel + 2] = 0;*/
+
+        var grey = 0.2126 * imageData.data[pixel] + 0.7152 * imageData.data[pixel + 1] + 0.0722 * imageData.data[pixel + 2];
+        imageData.data[pixel] = 0;
+        imageData.data[pixel + 1] = 0;
+        imageData.data[pixel + 2] = 0;
+
+        for(var predictionIndex = 0; predictionIndex < currentPredictions.length; predictionIndex++)
+        {
+            let handBBox = currentPredictions[predictionIndex].bbox;
+            if(triangles[i].centroid().x >= handBBox[0] 
+                && triangles[i].centroid().y >= handBBox[1]
+                && triangles[i].centroid().x <= handBBox[0]+handBBox[2] 
+                && triangles[i].centroid().y <= handBBox[1]+handBBox[3])
+            {
+                colorize = true;
+                //console.log(radius);
+                
+                imageData.data[pixel] = grey;
+                imageData.data[pixel + 1] = grey*.7;
+            }
+            /*var gradient = featureContext.createLinearGradient(0,0, 640,0);
+            featureContext.globalCompositeOperation = 'source-over';
+            // Add three color stops
+            gradient.addColorStop(0,'rgba(28,18,161,0.2)');
+            gradient.addColorStop(0.4,'rgba(28,18,161,0.2)');
+            gradient.addColorStop(1, 'rgba(226,255,0,0.2)');
+
+            // Set the fill style and draw a rectangle
+            featureContext.fillStyle = gradient;
+            featureContext.fillRect(handBBox[0], handBBox[1], handBBox[2], handBBox[3]);*/
+        }
+
+        if(triggered){
+            //console.log(radius);
+            //console.log(centerX);
+            var distX = centerX - triangles[i].centroid().x;
+            var distY = centerY - triangles[i].centroid().y;
+            var distance = Math.sqrt( (distX*distX) + (distY*distY) );
+            
+            if(distance <= radius){
+
+                imageData.data[pixel] = grey;
+                imageData.data[pixel + 1] = grey*.7;
+            }
+        }
 
         var r = imageData.data[pixel];
         var g = imageData.data[pixel + 1];
@@ -161,7 +392,6 @@ function drawTriangles() {
         triangles[i].draw(triangleContext)
         triangleContext.fill();
     }
-
 }
 
 //
