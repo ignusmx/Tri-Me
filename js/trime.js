@@ -244,7 +244,8 @@ function convertPointToScreenScale(point)
 }
 
 function init() {
-
+    leftSide = [300, ($(window).width()/2)-300];
+    rightSide = [($(window).width()/2)+300, $(window).width()-300];
     video.play();
     $("#loading").fadeTo(2000, 1);
 
@@ -260,7 +261,9 @@ function init() {
 
     //autoslide in case no one interacts in a while...
     setInterval(() => {
-        nextSlide();
+        triggered = true;
+        centerX = scaledLeftHandPos.x + ((scaledRightHandPost.x - scaledLeftHandPos.x) / 2);
+        centerY = scaledLeftHandPos.y + ((scaledRightHandPost.y - scaledLeftHandPos.y) / 2);
     }, 180000);
 }
 
