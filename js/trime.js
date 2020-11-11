@@ -41,7 +41,12 @@ var leftSide = [200, 400];
 var rightSide = [900, 1000];
 var slideTransitionInterval = null;
 var slides = [
-    {strings:["El futuro está en tus MANOS <br>#IgniteTheFuture"], rgb:[0,0,0]},
+    {strings:[
+        `El futuro está en tus MANOS 
+        <br>#IgniteTheFuture
+        <br>https://ignus.mx
+        <br>contacto@ignus.mx`
+        ], rgb:[0,0,0]},
     {strings:[
         `INNOVACIÓN: 
         <br> - TRANSFORMACIÓN DIGITAL 
