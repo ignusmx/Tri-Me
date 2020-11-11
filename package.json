@@ -1,0 +1,23 @@
+{
+  "name": "tri-me",
+  "version": "1.0.0",
+  "description": "WebRTC experiment using feature tracking and delaunay triangulation.",
+  "main": "index.js",
+  "dependencies": {
+    "typed.js": "^2.0.11"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ignusmx/Tri-Me.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ignusmx/Tri-Me/issues"
+  },
+  "homepage": "https://github.com/ignusmx/Tri-Me#readme"
+}
