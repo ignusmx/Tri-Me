@@ -205,7 +205,7 @@ function runDetection() {
                 clearInterval(slideTransitionInterval);
             }
                 slideTransitionInterval = setInterval(() => {
-                    console.log("interval");
+                    //console.log("interval");
                     radius += 20;
                     if(radius > 500)
                     {
@@ -493,7 +493,7 @@ function drawCorners(corners, count, img, step) {
 
 function resize(event) {
 
-    console.log($("#container").width());
+    //console.log($("#container").width());
 
     var newWidth = $("#container").width();
     var newHeight = $("#container").width() / triangleCanvas.width * triangleCanvas.height;
