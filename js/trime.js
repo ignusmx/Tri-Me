@@ -37,6 +37,16 @@ var leftHandPos = {x:0,y:0};
 var rightHandPost = {x:0,y:0};
 var scaledLeftHandPos = {x:0,y:0};
 var scaledRightHandPost = {x:0,y:0};
+var leftSide = [0, 400];
+var rightSide = [900, 1000];
+var slideTransitionInterval = null;
+var slides = [
+    {"text":"slide1", rgb:[0,0,0]},
+    {"text":"slide2", rgb:[1,.7,0]},
+    {"text":"slide3", rgb:[0,.7,1]}
+];
+var currentSlideIndex = -1;
+
 //
 
 const modelParams = {
@@ -44,6 +54,51 @@ const modelParams = {
     maxNumBoxes: 10,        // maximum number of boxes to detect
     iouThreshold: 0.5,      // ioU threshold for non-max suppression
     scoreThreshold: 0.8,    // confidence threshold for predictions.
+}
+
+function randomizeHands()
+{
+    var a = getRandomNumber(0, 45);
+    
+    $("#leftHand").css('transform', 'rotate(' + a + 'deg) scaleX(-1)');
+    $("#rightHand").css('transform', 'rotate(-' + a + 'deg)');
+
+    leftHandPos = {x: getRandomNumber(leftSide[0],leftSide[1]), y: getRandomNumber(200,400)};
+    rightHandPost = {x: getRandomNumber(rightSide[0],rightSide[1]), y: getRandomNumber(200,400)};
+    scaledLeftHandPos = convertPointToScreenScale(leftHandPos);
+    scaledRightHandPost = convertPointToScreenScale(rightHandPost);
+    
+    $("#leftHand").css('left', leftHandPos.x);
+    $("#leftHand").css('top', leftHandPos.y);
+
+    $("#rightHand").css('left', rightHandPost.x);
+    $("#rightHand").css('top', rightHandPost.y);
+
+    $("#leftHand").fadeTo(2000, 1);
+    $("#rightHand").fadeTo(2000, 1);
+}
+
+function getNextSlideIndex()
+{
+    var nextSlide = currentSlideIndex+1;
+    if(nextSlide == slides.length)
+    {
+        return 0;
+    }
+
+    return nextSlide;
+}
+function nextSlide(){
+    randomizeHands();
+    triggered = false;
+    radius = 0;
+    if(slideTransitionInterval != null)
+    {
+        clearInterval(slideTransitionInterval);
+    }
+
+    currentSlideIndex = getNextSlideIndex();
+    requestAnimationFrame(runDetection);
 }
 
 function startVideo() {
@@ -104,16 +159,22 @@ function runDetection() {
 
         if(triggered)
         {
-            model.dispose();
-            
-            triggered = true;
+            console.log("trigered!");
+            //model.dispose();
             currentPredictions = [];
-            video.pause();
-
-            setInterval(() => {
-                radius += 20;
-            }, 200);
-            
+            //video.pause();
+            if(slideTransitionInterval != null)
+            {
+                clearInterval(slideTransitionInterval);
+            }
+                slideTransitionInterval = setInterval(() => {
+                    console.log("interval");
+                    radius += 20;
+                    if(radius > 500)
+                    {
+                        nextSlide();
+                    }
+                }, 200);
         }
         else
         {
@@ -166,26 +227,7 @@ function init() {
                 model = lmodel;
                 //startVideo();
                 $("#loading").fadeTo(2000, 0);
-                var a = getRandomNumber(0, 45);
-                var leftSide = [0, 400];
-                var rightSide = [900, 1000];
-
-                $("#leftHand").css('transform', 'rotate(' + a + 'deg) scaleX(-1)');
-                $("#rightHand").css('transform', 'rotate(-' + a + 'deg)');
-
-                leftHandPos = {x: getRandomNumber(leftSide[0],leftSide[1]), y: getRandomNumber(200,400)};
-                rightHandPost = {x: getRandomNumber(rightSide[0],rightSide[1]), y: getRandomNumber(200,400)};
-                scaledLeftHandPos = convertPointToScreenScale(leftHandPos);
-                scaledRightHandPost = convertPointToScreenScale(rightHandPost);
-                
-                $("#leftHand").css('left', leftHandPos.x);
-                $("#leftHand").css('top', leftHandPos.y);
-
-                $("#rightHand").css('left', rightHandPost.x);
-                $("#rightHand").css('top', rightHandPost.y);
-
-                $("#leftHand").fadeTo(2000, 1);
-                $("#rightHand").fadeTo(2000, 1);
+                nextSlide();
                 runDetection();
                 startExperience();
             });
@@ -321,7 +363,6 @@ function drawTriangles() {
     var triangles = triangulate(vertices)
 
     var i = triangles.length;
-    var colorize = false;
     
     while (i) {
         --i;
@@ -334,9 +375,9 @@ function drawTriangles() {
         imageData.data[pixel + 2] = 0;*/
 
         var grey = 0.2126 * imageData.data[pixel] + 0.7152 * imageData.data[pixel + 1] + 0.0722 * imageData.data[pixel + 2];
-        imageData.data[pixel] = 0;
-        imageData.data[pixel + 1] = 0;
-        imageData.data[pixel + 2] = 0;
+        imageData.data[pixel] = grey * slides[currentSlideIndex].rgb[0];
+        imageData.data[pixel + 1] = grey * slides[currentSlideIndex].rgb[1];
+        imageData.data[pixel + 2] = grey * slides[currentSlideIndex].rgb[2];
 
         for(var predictionIndex = 0; predictionIndex < currentPredictions.length; predictionIndex++)
         {
@@ -346,11 +387,11 @@ function drawTriangles() {
                 && triangles[i].centroid().x <= handBBox[0]+handBBox[2] 
                 && triangles[i].centroid().y <= handBBox[1]+handBBox[3])
             {
-                colorize = true;
                 //console.log(radius);
                 
-                imageData.data[pixel] = grey;
-                imageData.data[pixel + 1] = grey*.7;
+                imageData.data[pixel] = grey * slides[getNextSlideIndex()].rgb[0];
+                imageData.data[pixel + 1] = grey * slides[getNextSlideIndex()].rgb[1];
+                imageData.data[pixel + 2] = grey * slides[getNextSlideIndex()].rgb[2];
             }
             /*var gradient = featureContext.createLinearGradient(0,0, 640,0);
             featureContext.globalCompositeOperation = 'source-over';
@@ -372,9 +413,9 @@ function drawTriangles() {
             var distance = Math.sqrt( (distX*distX) + (distY*distY) );
             
             if(distance <= radius){
-
-                imageData.data[pixel] = grey;
-                imageData.data[pixel + 1] = grey*.7;
+                imageData.data[pixel] = grey * slides[getNextSlideIndex()].rgb[0];
+                imageData.data[pixel + 1] = grey * slides[getNextSlideIndex()].rgb[1];
+                imageData.data[pixel + 2] = grey * slides[getNextSlideIndex()].rgb[2];
             }
         }
 
