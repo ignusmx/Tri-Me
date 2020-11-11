@@ -37,13 +37,30 @@ var leftHandPos = {x:0,y:0};
 var rightHandPost = {x:0,y:0};
 var scaledLeftHandPos = {x:0,y:0};
 var scaledRightHandPost = {x:0,y:0};
-var leftSide = [0, 400];
+var leftSide = [200, 400];
 var rightSide = [900, 1000];
 var slideTransitionInterval = null;
 var slides = [
-    {"text":"slide1", rgb:[0,0,0]},
-    {"text":"slide2", rgb:[1,.7,0]},
-    {"text":"slide3", rgb:[0,.7,1]}
+    {strings:["El futuro está en tus MANOS <br>#IgniteTheFuture"], rgb:[0,0,0]},
+    {strings:[
+        `INNOVACIÓN: 
+        <br> - TRANSFORMACIÓN DIGITAL 
+        <br> - DATA SCIENCE + INTELIGENCIA DE NEGOCIOS
+        <br> - VIDEOJUEGOS Y EXPERIENCIAS INTERACTIVAS`
+    ], rgb:[1,.7,0]},
+    {strings:[
+        `TECNOLOGÍA: 
+        <br> - DESARROLLO DE SOFTWARE A LA MEDIDA 
+        <br> - SITIOS WEB + E-COMMERCE
+        <br> - CRM Y ERP
+        <br> - SOFTWARE PARA LA CONSTRUCCIÓN, <br> AGRO Y GEOLOCALIZACIÓN`
+    ], rgb:[0,.7,1]},
+    {strings:[
+        `ARTE Y DISEÑO: 
+        <br> - DISEÑO DE MARCA E IDENTIDAD
+        <br> - MARKETING DIGITAL
+        <br> - DISEÑO GRÁFICO + UI/UX`
+    ], rgb:[.7,0,1]}
 ];
 var currentSlideIndex = -1;
 
@@ -51,10 +68,19 @@ var currentSlideIndex = -1;
 
 const modelParams = {
     flipHorizontal: true,   // flip e.g for video  
-    maxNumBoxes: 10,        // maximum number of boxes to detect
+    maxNumBoxes: 4,        // maximum number of boxes to detect
     iouThreshold: 0.5,      // ioU threshold for non-max suppression
     scoreThreshold: 0.8,    // confidence threshold for predictions.
 }
+
+/*var typed = new Typed('.typed', {
+    strings: [""],
+    typeSpeed: 1,
+    backSpeed: 1,
+    showCursor:false
+});*/
+
+//typed.stop();
 
 function randomizeHands()
 {
@@ -98,6 +124,13 @@ function nextSlide(){
     }
 
     currentSlideIndex = getNextSlideIndex();
+    $("#text").html(slides[currentSlideIndex].strings[0]);
+    $("#text").fadeTo(2000, 1);
+    /*typed.strings = slides[currentSlideIndex].strings;
+    typed.reset();
+    typed.start();*/
+
+
     requestAnimationFrame(runDetection);
 }
 
@@ -146,9 +179,6 @@ function runDetection() {
                 triggered = true;
                 centerX = scaledLeftHandPos.x + ((scaledRightHandPost.x - scaledLeftHandPos.x) / 2);
                 centerY = scaledLeftHandPos.y + ((scaledRightHandPost.y - scaledLeftHandPos.y) / 2);
-                $("#leftHand").fadeTo(2000, 0);
-                $("#rightHand").fadeTo(2000, 0);
-                $("#text").fadeTo(2000, 0);
             }
             /*if(!triggering)
             {
@@ -159,7 +189,9 @@ function runDetection() {
 
         if(triggered)
         {
-            console.log("trigered!");
+            $("#leftHand").fadeTo(2000, 0);
+            $("#rightHand").fadeTo(2000, 0);
+            $("#text").fadeTo(2000, 0);
             //model.dispose();
             currentPredictions = [];
             //video.pause();
@@ -214,25 +246,22 @@ function convertPointToScreenScale(point)
 function init() {
 
     video.play();
-    var typed = new Typed('.typed', {
-        strings: ["Keep your distance and \nUSE YOUR HANDS TO #IgniteTheFuture."],
-        typeSpeed: 50,
-        backSpeed: 50,
-        onComplete: function(){
-            // Load the model.
-            $("#loading").fadeTo(2000, 1);
+    $("#loading").fadeTo(2000, 1);
 
-            handTrack.load(modelParams).then(lmodel => {
-                // detect objects in the image.
-                model = lmodel;
-                //startVideo();
-                $("#loading").fadeTo(2000, 0);
-                nextSlide();
-                runDetection();
-                startExperience();
-            });
-        }
+    handTrack.load(modelParams).then(lmodel => {
+        // detect objects in the image.
+        model = lmodel;
+        //startVideo();
+        $("#loading").fadeTo(2000, 0);
+        nextSlide();
+        runDetection();
+        startExperience();
     });
+
+    //autoslide in case no one interacts in a while...
+    setInterval(() => {
+        nextSlide();
+    }, 180000);
 }
 
 //
