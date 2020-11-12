@@ -3,8 +3,8 @@
 var options = {
     type: "YAPE06",
     fastThreshold: 16,
-    laplacianThreshold: 70,
-    eigenThreshold: 18,
+    laplacianThreshold: 89,
+    eigenThreshold: 75,
     hueShift: 0,
     invertLightness: false,
     invertSaturation: false,
@@ -43,29 +43,27 @@ var slideTransitionInterval = null;
 var slides = [
     {strings:[
         `El futuro está en tus MANOS 
-        <br>#IgniteTheFuture
-        <br>https://ignus.mx
-        <br>contacto@ignus.mx`
-        ], rgb:[0,0,0]},
+        <br>#IgniteTheFuture | https://ignus.mx | contacto@ignus.mx`
+        ], rgb:[1,.7,0]},
     {strings:[
         `INNOVACIÓN: 
         <br> - TRANSFORMACIÓN DIGITAL 
         <br> - DATA SCIENCE + INTELIGENCIA DE NEGOCIOS
         <br> - VIDEOJUEGOS Y EXPERIENCIAS INTERACTIVAS`
-    ], rgb:[1,.7,0]},
+    ], rgb:[0,.7,1]},
     {strings:[
         `TECNOLOGÍA: 
         <br> - DESARROLLO DE SOFTWARE A LA MEDIDA 
         <br> - SITIOS WEB + E-COMMERCE
         <br> - CRM Y ERP
         <br> - SOFTWARE PARA LA CONSTRUCCIÓN, <br> AGRO Y GEOLOCALIZACIÓN`
-    ], rgb:[0,.7,1]},
+    ], rgb:[.7,0,1]},
     {strings:[
         `ARTE Y DISEÑO: 
         <br> - DISEÑO DE MARCA E IDENTIDAD
         <br> - MARKETING DIGITAL
         <br> - DISEÑO GRÁFICO + UI/UX`
-    ], rgb:[.7,0,1]}
+    ], rgb:[0,0,1]}
 ];
 var currentSlideIndex = -1;
 
@@ -75,7 +73,7 @@ const modelParams = {
     flipHorizontal: true,   // flip e.g for video  
     maxNumBoxes: 4,        // maximum number of boxes to detect
     iouThreshold: 0.5,      // ioU threshold for non-max suppression
-    scoreThreshold: 0.8,    // confidence threshold for predictions.
+    scoreThreshold: 0.6,    // confidence threshold for predictions.
 }
 
 /*var typed = new Typed('.typed', {
@@ -94,8 +92,8 @@ function randomizeHands()
     $("#leftHand").css('transform', 'rotate(' + a + 'deg) scaleX(-1)');
     $("#rightHand").css('transform', 'rotate(-' + a + 'deg)');
 
-    leftHandPos = {x: getRandomNumber(leftSide[0],leftSide[1]), y: getRandomNumber(200,400)};
-    rightHandPost = {x: getRandomNumber(rightSide[0],rightSide[1]), y: getRandomNumber(200,400)};
+    leftHandPos = {x: getRandomNumber(leftSide[0],leftSide[1]), y: getRandomNumber(100,200)};
+    rightHandPost = {x: getRandomNumber(rightSide[0],rightSide[1]), y: getRandomNumber(100,200)};
     scaledLeftHandPos = convertPointToScreenScale(leftHandPos);
     scaledRightHandPost = convertPointToScreenScale(rightHandPost);
     
@@ -179,7 +177,7 @@ function runDetection() {
                 rightHandCollided = rightHandCollided ? rightHandCollided : testHandCollision(scaledRightHandPost, currentPredictions[i].bbox);
             }
 
-            if(leftHandCollided && rightHandCollided)
+            if(leftHandCollided || rightHandCollided)
             {
                 triggered = true;
                 centerX = scaledLeftHandPos.x + ((scaledRightHandPost.x - scaledLeftHandPos.x) / 2);
