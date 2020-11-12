@@ -38,6 +38,9 @@ var rightHandPost = {x:0,y:0};
 var scaledLeftHandPos = {x:0,y:0};
 var scaledRightHandPost = {x:0,y:0};
 var collisionButton = null;
+var preselectedButton = null;
+var selectTimeout = null;
+var handRGB = [1,.7,0];
 
 var slideTransitionInterval = null;
 var slides = [
@@ -45,35 +48,41 @@ var slides = [
         "USA TUS MANOS PARA INTERACTUAR"
         ],
     buttons : [{text:"SERVICIOS", slide:1}, {text:"CASOS DE ÉXITO", slide:2}],
-    rgb:[1,.7,0]},
+    rgb:[.7,0,1]},
     {strings:[
         "SERVICIOS"
     ], 
     buttons : [
-        {text:"INNOVACIÓN", slide:1}, 
-        {text:"TECNOLOGÍA", slide:2}, 
-        {text:"ARTE Y DISEÑO", slide:2},
+        {text:"INNOVACIÓN", slide:2}, 
+        {text:"TECNOLOGÍA", slide:3}, 
+        {text:"ARTE Y DISEÑO", slide:4},
         {text:"REGRESAR", slide:0}],
-    rgb:[.7,0,1]},
+    rgb:[0,.7,1]},
     {strings:[
-        `INNOVACIÓN: 
+        `INNOVACIÓN
         <br> - TRANSFORMACIÓN DIGITAL 
         <br> - DATA SCIENCE + INTELIGENCIA DE NEGOCIOS
         <br> - VIDEOJUEGOS Y EXPERIENCIAS INTERACTIVAS`
-    ], rgb:[0,.7,1]},
+    ],
+    buttons : [{text:"REGRESAR", slide:1}],
+    rgb:[0,.7,1]},
     {strings:[
-        `TECNOLOGÍA: 
+        `TECNOLOGÍA 
         <br> - DESARROLLO DE SOFTWARE A LA MEDIDA 
         <br> - SITIOS WEB + E-COMMERCE
         <br> - CRM Y ERP
         <br> - SOFTWARE PARA LA CONSTRUCCIÓN, <br> AGRO Y GEOLOCALIZACIÓN`
-    ], rgb:[.7,0,1]},
+    ],
+    buttons : [{text:"REGRESAR", slide:1}], 
+    rgb:[.7,0,1]},
     {strings:[
-        `ARTE Y DISEÑO: 
+        `ARTE Y DISEÑO
         <br> - DISEÑO DE MARCA E IDENTIDAD
         <br> - MARKETING DIGITAL
         <br> - DISEÑO GRÁFICO + UI/UX`
-    ], rgb:[.7,0,0]}
+    ],
+    buttons : [{text:"REGRESAR", slide:1}],
+    rgb:[.7,0,0]}
 ];
 var currentSlideIndex = 0;
 
@@ -105,11 +114,17 @@ function setupButtons()
         {
             $("#buttonsContainer").append('<div class="handButton">'+buttons[i].text+'</div>');
             var buttonElt = $("#buttonsContainer .handButton").last();
-            var pos = buttonElt.offset();
-            buttons[i].pos = {x:pos.left + (buttonElt.width()/2), y:pos.top + (buttonElt.height()/2)};
-            buttons[i].scaledPos = convertPointToScreenScale(buttons[i].pos);
             buttons[i].elt = buttonElt;
         }
+        for(var i = 0; i < buttons.length; i++)
+        {
+            var pos = buttons[i].elt.offset();
+            buttons[i].pos = {x:pos.left+buttons[i].elt.width()/2, y:pos.top+buttons[i].elt.height()/2};
+            //$("body").append('<div style="color:white; position:absolute; left:'+buttons[i].pos.x+'px; top:'+buttons[i].pos.y+'px;">A</div>');
+            buttons[i].scaledPos = convertPointToScreenScale(buttons[i].pos);
+        }
+
+        
         
         $(".handButton").fadeTo(2000, 1);
     }
@@ -165,6 +180,8 @@ function runDetection() {
     model.detect(video).then(predictions => {
         currentPredictions = predictions;
         mainPrediction = null;
+        
+
         if(!triggered && predictions.length > 0 
             && currentSlideIndex >= 0 
             && slides[currentSlideIndex] != null
@@ -172,6 +189,7 @@ function runDetection() {
             && slides[currentSlideIndex].buttons.length > 0){
             mainPrediction = currentPredictions[0];
             collisionButton = null;
+
             for(var i = 0; i < currentPredictions.length; i++)
             {
                 for(var j = 0; j < slides[currentSlideIndex].buttons.length; j++)
@@ -180,16 +198,28 @@ function runDetection() {
                         && testHandCollision(slides[currentSlideIndex].buttons[j].scaledPos, currentPredictions[i].bbox))
                     {
                         collisionButton = slides[currentSlideIndex].buttons[j];
+                        if(selectTimeout != null)
+                        {
+                            //clearTimeout(selectTimeout);
+                        }
                     }
                 }
             }
 
-            if(collisionButton != null)
+            if(collisionButton != null && selectTimeout == null)
             {
-                triggered = true;
-                centerX = collisionButton.scaledPos.x;
-                centerY = collisionButton.scaledPos.y;
-                collisionButton.elt.addClass("touchedButton");
+                //console.log("asdddd");
+                selectTimeout = 
+                setTimeout(function() {
+                    if(collisionButton != null)
+                    {
+                        selectTimeout = null;
+                        triggered = true;
+                        centerX = collisionButton.scaledPos.x;
+                        centerY = collisionButton.scaledPos.y;
+                        collisionButton.elt.addClass("touchedButton");
+                    }
+                }, 3000);
             }
             /*if(!triggering)
             {
@@ -212,10 +242,10 @@ function runDetection() {
             }
                 slideTransitionInterval = setInterval(() => {
                     //console.log("interval");
-                    radius += 20;
+                    radius += 50;
                     if(radius > 500)
                     {
-                        console.log(collisionButton);
+                        
                         goToSlide(collisionButton.slide);
                     }
                 }, 200);
@@ -411,9 +441,9 @@ function drawTriangles() {
         imageData.data[pixel + 2] = 0;*/
 
         var grey = 0.2126 * imageData.data[pixel] + 0.7152 * imageData.data[pixel + 1] + 0.0722 * imageData.data[pixel + 2];
-        /*imageData.data[pixel] = grey * slides[currentSlideIndex].rgb[0];
+        imageData.data[pixel] = grey * slides[currentSlideIndex].rgb[0];
         imageData.data[pixel + 1] = grey * slides[currentSlideIndex].rgb[1];
-        imageData.data[pixel + 2] = grey * slides[currentSlideIndex].rgb[2];*/
+        imageData.data[pixel + 2] = grey * slides[currentSlideIndex].rgb[2];
 
         for(var predictionIndex = 0; predictionIndex < currentPredictions.length; predictionIndex++)
         {
@@ -425,9 +455,9 @@ function drawTriangles() {
             {
                 //console.log(radius);
                 
-                imageData.data[pixel] = grey * slides[currentSlideIndex].rgb[0];
-                imageData.data[pixel + 1] = grey * slides[currentSlideIndex].rgb[1];
-                imageData.data[pixel + 2] = grey * slides[currentSlideIndex].rgb[2];
+                imageData.data[pixel] = grey * handRGB[0];
+                imageData.data[pixel + 1] = grey * handRGB[1];
+                imageData.data[pixel + 2] = grey * handRGB[2];
             }
         }
 
