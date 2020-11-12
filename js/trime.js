@@ -37,14 +37,24 @@ var leftHandPos = {x:0,y:0};
 var rightHandPost = {x:0,y:0};
 var scaledLeftHandPos = {x:0,y:0};
 var scaledRightHandPost = {x:0,y:0};
-var leftSide = [200, 400];
-var rightSide = [900, 1000];
+var collisionButton = null;
+
 var slideTransitionInterval = null;
 var slides = [
     {strings:[
-        `El futuro está en tus MANOS 
-        <br>#IgniteTheFuture | https://ignus.mx | contacto@ignus.mx`
-        ], rgb:[1,.7,0]},
+        "USA TUS MANOS PARA INTERACTUAR"
+        ],
+    buttons : [{text:"SERVICIOS", slide:1}, {text:"CASOS DE ÉXITO", slide:2}],
+    rgb:[1,.7,0]},
+    {strings:[
+        "SERVICIOS"
+    ], 
+    buttons : [
+        {text:"INNOVACIÓN", slide:1}, 
+        {text:"TECNOLOGÍA", slide:2}, 
+        {text:"ARTE Y DISEÑO", slide:2},
+        {text:"REGRESAR", slide:0}],
+    rgb:[.7,0,1]},
     {strings:[
         `INNOVACIÓN: 
         <br> - TRANSFORMACIÓN DIGITAL 
@@ -63,9 +73,9 @@ var slides = [
         <br> - DISEÑO DE MARCA E IDENTIDAD
         <br> - MARKETING DIGITAL
         <br> - DISEÑO GRÁFICO + UI/UX`
-    ], rgb:[0,0,1]}
+    ], rgb:[.7,0,0]}
 ];
-var currentSlideIndex = -1;
+var currentSlideIndex = 0;
 
 //
 
@@ -85,40 +95,28 @@ const modelParams = {
 
 //typed.stop();
 
-function randomizeHands()
+function setupButtons()
 {
-    var a = getRandomNumber(0, 45);
-    
-    $("#leftHand").css('transform', 'rotate(' + a + 'deg) scaleX(-1)');
-    $("#rightHand").css('transform', 'rotate(-' + a + 'deg)');
-
-    leftHandPos = {x: getRandomNumber(leftSide[0],leftSide[1]), y: getRandomNumber(100,200)};
-    rightHandPost = {x: getRandomNumber(rightSide[0],rightSide[1]), y: getRandomNumber(100,200)};
-    scaledLeftHandPos = convertPointToScreenScale(leftHandPos);
-    scaledRightHandPost = convertPointToScreenScale(rightHandPost);
-    
-    $("#leftHand").css('left', leftHandPos.x);
-    $("#leftHand").css('top', leftHandPos.y);
-
-    $("#rightHand").css('left', rightHandPost.x);
-    $("#rightHand").css('top', rightHandPost.y);
-
-    $("#leftHand").fadeTo(2000, 1);
-    $("#rightHand").fadeTo(2000, 1);
-}
-
-function getNextSlideIndex()
-{
-    var nextSlide = currentSlideIndex+1;
-    if(nextSlide == slides.length)
+    $("#buttonsContainer").html("");
+    var buttons = slides[currentSlideIndex].buttons;
+    if(buttons != null)
     {
-        return 0;
+        for(var i = 0; i < buttons.length; i++)
+        {
+            $("#buttonsContainer").append('<div class="handButton">'+buttons[i].text+'</div>');
+            var buttonElt = $("#buttonsContainer .handButton").last();
+            var pos = buttonElt.offset();
+            buttons[i].pos = {x:pos.left + (buttonElt.width()/2), y:pos.top + (buttonElt.height()/2)};
+            buttons[i].scaledPos = convertPointToScreenScale(buttons[i].pos);
+            buttons[i].elt = buttonElt;
+        }
+        
+        $(".handButton").fadeTo(2000, 1);
     }
-
-    return nextSlide;
 }
-function nextSlide(){
-    randomizeHands();
+
+function goToSlide(slide){
+    
     triggered = false;
     radius = 0;
     if(slideTransitionInterval != null)
@@ -126,13 +124,13 @@ function nextSlide(){
         clearInterval(slideTransitionInterval);
     }
 
-    currentSlideIndex = getNextSlideIndex();
+    currentSlideIndex = slide;
     $("#text").html(slides[currentSlideIndex].strings[0]);
     $("#text").fadeTo(2000, 1);
     /*typed.strings = slides[currentSlideIndex].strings;
     typed.reset();
     typed.start();*/
-
+    setupButtons();
 
     requestAnimationFrame(runDetection);
 }
@@ -167,21 +165,31 @@ function runDetection() {
     model.detect(video).then(predictions => {
         currentPredictions = predictions;
         mainPrediction = null;
-        if(predictions.length > 0){
+        if(!triggered && predictions.length > 0 
+            && currentSlideIndex >= 0 
+            && slides[currentSlideIndex] != null
+            && slides[currentSlideIndex].buttons != null
+            && slides[currentSlideIndex].buttons.length > 0){
             mainPrediction = currentPredictions[0];
-            var leftHandCollided = false;
-            var rightHandCollided = false;
+            collisionButton = null;
             for(var i = 0; i < currentPredictions.length; i++)
             {
-                leftHandCollided = leftHandCollided ? leftHandCollided : testHandCollision(scaledLeftHandPos, currentPredictions[i].bbox);
-                rightHandCollided = rightHandCollided ? rightHandCollided : testHandCollision(scaledRightHandPost, currentPredictions[i].bbox);
+                for(var j = 0; j < slides[currentSlideIndex].buttons.length; j++)
+                {
+                    if(collisionButton == null 
+                        && testHandCollision(slides[currentSlideIndex].buttons[j].scaledPos, currentPredictions[i].bbox))
+                    {
+                        collisionButton = slides[currentSlideIndex].buttons[j];
+                    }
+                }
             }
 
-            if(leftHandCollided || rightHandCollided)
+            if(collisionButton != null)
             {
                 triggered = true;
-                centerX = scaledLeftHandPos.x + ((scaledRightHandPost.x - scaledLeftHandPos.x) / 2);
-                centerY = scaledLeftHandPos.y + ((scaledRightHandPost.y - scaledLeftHandPos.y) / 2);
+                centerX = collisionButton.scaledPos.x;
+                centerY = collisionButton.scaledPos.y;
+                collisionButton.elt.addClass("touchedButton");
             }
             /*if(!triggering)
             {
@@ -207,7 +215,8 @@ function runDetection() {
                     radius += 20;
                     if(radius > 500)
                     {
-                        nextSlide();
+                        console.log(collisionButton);
+                        goToSlide(collisionButton.slide);
                     }
                 }, 200);
         }
@@ -247,8 +256,6 @@ function convertPointToScreenScale(point)
 }
 
 function init() {
-    leftSide = [300, ($(window).width()/2)-300];
-    rightSide = [($(window).width()/2)+300, $(window).width()-300];
     video.play();
     $("#loading").fadeTo(2000, 1);
 
@@ -257,17 +264,10 @@ function init() {
         model = lmodel;
         //startVideo();
         $("#loading").fadeTo(2000, 0);
-        nextSlide();
+        goToSlide(0);
         runDetection();
         startExperience();
     });
-
-    //autoslide in case no one interacts in a while...
-    setInterval(() => {
-        triggered = true;
-        centerX = scaledLeftHandPos.x + ((scaledRightHandPost.x - scaledLeftHandPos.x) / 2);
-        centerY = scaledLeftHandPos.y + ((scaledRightHandPost.y - scaledLeftHandPos.y) / 2);
-    }, 180000);
 }
 
 //
@@ -401,7 +401,8 @@ function drawTriangles() {
     
     while (i) {
         --i;
-        var pixel = (triangles[i].centroid().y * triangleCanvas.width + triangles[i].centroid().x) * 4;
+        var centroid = triangles[i].centroid();
+        var pixel = (centroid.y * triangleCanvas.width + centroid.x) * 4;
         
         //greyscale
         /*var grey = 0.2126 * imageData.data[pixel] + 0.7152 * imageData.data[pixel + 1] + 0.0722 * imageData.data[pixel + 2];
@@ -410,34 +411,24 @@ function drawTriangles() {
         imageData.data[pixel + 2] = 0;*/
 
         var grey = 0.2126 * imageData.data[pixel] + 0.7152 * imageData.data[pixel + 1] + 0.0722 * imageData.data[pixel + 2];
-        imageData.data[pixel] = grey * slides[currentSlideIndex].rgb[0];
+        /*imageData.data[pixel] = grey * slides[currentSlideIndex].rgb[0];
         imageData.data[pixel + 1] = grey * slides[currentSlideIndex].rgb[1];
-        imageData.data[pixel + 2] = grey * slides[currentSlideIndex].rgb[2];
+        imageData.data[pixel + 2] = grey * slides[currentSlideIndex].rgb[2];*/
 
         for(var predictionIndex = 0; predictionIndex < currentPredictions.length; predictionIndex++)
         {
             let handBBox = currentPredictions[predictionIndex].bbox;
-            if(triangles[i].centroid().x >= handBBox[0] 
-                && triangles[i].centroid().y >= handBBox[1]
-                && triangles[i].centroid().x <= handBBox[0]+handBBox[2] 
-                && triangles[i].centroid().y <= handBBox[1]+handBBox[3])
+            if(centroid.x >= handBBox[0] 
+                && centroid.y >= handBBox[1]
+                && centroid.x <= handBBox[0]+handBBox[2] 
+                && centroid.y <= handBBox[1]+handBBox[3])
             {
                 //console.log(radius);
                 
-                imageData.data[pixel] = grey * slides[getNextSlideIndex()].rgb[0];
-                imageData.data[pixel + 1] = grey * slides[getNextSlideIndex()].rgb[1];
-                imageData.data[pixel + 2] = grey * slides[getNextSlideIndex()].rgb[2];
+                imageData.data[pixel] = grey * slides[currentSlideIndex].rgb[0];
+                imageData.data[pixel + 1] = grey * slides[currentSlideIndex].rgb[1];
+                imageData.data[pixel + 2] = grey * slides[currentSlideIndex].rgb[2];
             }
-            /*var gradient = featureContext.createLinearGradient(0,0, 640,0);
-            featureContext.globalCompositeOperation = 'source-over';
-            // Add three color stops
-            gradient.addColorStop(0,'rgba(28,18,161,0.2)');
-            gradient.addColorStop(0.4,'rgba(28,18,161,0.2)');
-            gradient.addColorStop(1, 'rgba(226,255,0,0.2)');
-
-            // Set the fill style and draw a rectangle
-            featureContext.fillStyle = gradient;
-            featureContext.fillRect(handBBox[0], handBBox[1], handBBox[2], handBBox[3]);*/
         }
 
         if(triggered){
@@ -448,9 +439,9 @@ function drawTriangles() {
             var distance = Math.sqrt( (distX*distX) + (distY*distY) );
             
             if(distance <= radius){
-                imageData.data[pixel] = grey * slides[getNextSlideIndex()].rgb[0];
-                imageData.data[pixel + 1] = grey * slides[getNextSlideIndex()].rgb[1];
-                imageData.data[pixel + 2] = grey * slides[getNextSlideIndex()].rgb[2];
+                imageData.data[pixel] = grey * slides[collisionButton.slide].rgb[0];
+                imageData.data[pixel + 1] = grey * slides[collisionButton.slide].rgb[1];
+                imageData.data[pixel + 2] = grey * slides[collisionButton.slide].rgb[2];
             }
         }
 

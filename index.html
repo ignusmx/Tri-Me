@@ -17,7 +17,7 @@
 
     <link rel="stylesheet" type="text/css" href="css/screen.css" />
     <link rel="stylesheet" href="css/font-awesome.min.css">
-    
+    <link rel="preconnect" href="https://fonts.gstatic.com"> 
 </head>
 
 <body style="background-color: black;">
@@ -33,21 +33,19 @@
         <canvas id="hand" width="640" height="480"></canvas>
     </div>
     
-    <div id="handsContainer" style="position: absolute; left: 0; top: 0; color:white">
-        <img id="leftHand" src="img/hand.svg" style="width: 100px; opacity:0; position: absolute;">
-        <img id="rightHand" src="img/hand.svg" style="width: 100px; opacity:0; position: absolute;">
-    </div>
-    
-    <div id="text" style="font-size: 35px; color:white; position:absolute; 
-        width:100%; height: 100%; text-align: center; 
-        display: flex; opacity: 0;
-    justify-content: center;align-items: center; text-shadow: 1px 1px 2px black;
-    ">
-        <div>
-            <span class="typed" style=" white-space: pre;"></span>
-            <div id="loading" style="font-size: 20px; opacity:0;">Loading...</div>
+    <div style="position: absolute; width: 100%; height: 100%; display: flex; 
+    align-items: center; justify-content: center; flex-direction: column;">
+        <div id="text" style="font-size: 35px; color:white; text-shadow: 1px 1px 2px black;
+        ">
+            <div>
+                <span class="typed" style=" white-space: pre;"></span>
+                <div id="loading" style="font-size: 20px; opacity:0;">Loading...</div>
+            </div>
+        </div>
+        <div id="buttonsContainer">
         </div>
     </div>
+    
     <div id="banner">
         <div class="alert visible"><a href="https://ignus.mx"
         target="_blank">HTTPS://IGNUS.MX | CONTACTO@IGNUS.MX</a></div>
