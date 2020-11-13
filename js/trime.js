@@ -47,7 +47,7 @@ var slides = [
     {strings:[
         "USA TUS MANOS PARA INTERACTUAR"
         ],
-    buttons : [{text:"SERVICIOS", slide:1}, {text:"CASOS DE ÉXITO", slide:2}],
+    buttons : [{text:"SERVICIOS", slide:1}],
     rgb:[.7,0,1]},
     {strings:[
         "SERVICIOS"
@@ -180,13 +180,13 @@ function runDetection() {
     model.detect(video).then(predictions => {
         currentPredictions = predictions;
         mainPrediction = null;
-        
-
+        //console.log(".");
         if(!triggered && predictions.length > 0 
             && currentSlideIndex >= 0 
             && slides[currentSlideIndex] != null
             && slides[currentSlideIndex].buttons != null
             && slides[currentSlideIndex].buttons.length > 0){
+            
             mainPrediction = currentPredictions[0];
             collisionButton = null;
 
